@@ -18,6 +18,7 @@ function getSvgPathFromStroke(stroke: number[][]): string {
 
 export function useCanvas() {
   const [strokes, setStrokes] = useState<Stroke[]>([])
+  const [redoStack, setRedoStack] = useState<Stroke[][]>([])
   const [currentStroke, setCurrentStroke] = useState<Point[]>([])
   const [tool, setTool] = useState<Tool>('pen')
   const [color, setColor] = useState('#ffffff')
@@ -25,16 +26,19 @@ export function useCanvas() {
   const isDrawing = useRef(false)
 
   const startStroke = useCallback((x: number, y: number, pressure: number) => {
+    if (tool === 'eraser') return
     isDrawing.current = true
     setCurrentStroke([{ x, y, pressure }])
-  }, [])
+  }, [tool])
 
   const continueStroke = useCallback((x: number, y: number, pressure: number) => {
+    if (tool === 'eraser') return
     if (!isDrawing.current) return
     setCurrentStroke(prev => [...prev, { x, y, pressure }])
-  }, [])
+  }, [tool])
 
   const endStroke = useCallback(() => {
+    if (tool === 'eraser') return
     if (!isDrawing.current) return
     isDrawing.current = false
     setCurrentStroke(prev => {
@@ -46,13 +50,50 @@ export function useCanvas() {
           size,
           opacity: 1,
         }
-        setStrokes(s => [...s, newStroke])
+        setStrokes(s => {
+          setRedoStack([]) // clear redo on new stroke
+          return [...s, newStroke]
+        })
       }
       return []
     })
-  }, [color, size])
+  }, [tool, color, size])
+
+  // Eraser — removes any stroke whose points are near the touch point
+  const eraseAt = useCallback((x: number, y: number) => {
+    const ERASE_RADIUS = 20
+    setStrokes(prev =>
+      prev.filter(stroke => {
+        const hit = stroke.points.some(
+          p => Math.hypot(p.x - x, p.y - y) < ERASE_RADIUS
+        )
+        return !hit
+      })
+    )
+  }, [])
+
+  // Undo — pop last stroke, push to redo stack
+  const undo = useCallback(() => {
+    setStrokes(prev => {
+      if (prev.length === 0) return prev
+      const last = prev[prev.length - 1]
+      setRedoStack(r => [...r, [...prev]])
+      return prev.slice(0, -1)
+    })
+  }, [])
+
+  // Redo — restore last undone state
+  const redo = useCallback(() => {
+    setRedoStack(prev => {
+      if (prev.length === 0) return prev
+      const last = prev[prev.length - 1]
+      setStrokes(last)
+      return prev.slice(0, -1)
+    })
+  }, [])
 
   const clearCanvas = useCallback(() => {
+    setRedoStack([])
     setStrokes([])
     setCurrentStroke([])
   }, [])
@@ -82,6 +123,9 @@ export function useCanvas() {
     startStroke,
     continueStroke,
     endStroke,
+    eraseAt,
+    undo,
+    redo,
     clearCanvas,
     getPath,
   }
