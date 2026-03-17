@@ -13,3 +13,9 @@ export interface Stroke {
 }
 
 export type Tool = 'pen' | 'eraser'
+
+export interface Viewport {
+  x: number
+  y: number
+  zoom: number
+}
