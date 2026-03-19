@@ -4,6 +4,11 @@ export interface Point {
   pressure: number
 }
 
+export type ShapeType =
+  | 'rect' | 'rounded-rect' | 'circle' | 'line' | 'arrow'
+  | 'triangle' | 'star' | 'diamond' | 'cross'
+  | 'hexagon' | 'pentagon' | 'heart' | 'speech-bubble' | 'cloud'
+
 export interface Stroke {
   id: string
   kind: 'stroke'
@@ -18,7 +23,7 @@ export interface Stroke {
 export interface Shape {
   id: string
   kind: 'shape'
-  type: 'rect' | 'circle' | 'line'
+  type: ShapeType
   x: number
   y: number
   width: number
@@ -30,12 +35,33 @@ export interface Shape {
   name: string
 }
 
-export type Element = Stroke | Shape
+export interface Frame {
+  id: string
+  kind: 'frame'
+  name: string
+  x: number
+  y: number
+  width: number
+  height: number
+  background: string
+  visible: boolean
+}
 
-export type Tool = 'pen' | 'eraser' | 'rect' | 'circle' | 'line'
+export type Element = Stroke | Shape | Frame
+
+export type Tool =
+  | 'select' | 'pan' | 'lasso'
+  | 'pen' | 'eraser' | 'frame'
+  | ShapeType
 
 export interface Viewport {
   x: number
   y: number
   zoom: number
+}
+
+export interface Page {
+  id: string
+  name: string
+  elements: Element[]
 }
